@@ -1,16 +1,19 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-	X,
-	ChevronDown,
-	ChevronUp,
-	Flame,
-	ChevronDownIcon,
-	ChevronsDown,
-} from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
+import { z } from "zod";
 import { useWithdrawal } from "@/app/store/store";
+
+const withdrawalSchema = (balanceCents: number) =>
+	z.object({
+		amountCents: z
+			.number()
+			.min(3000, "O valor mínimo para saque é R$ 30,00")
+			.max(balanceCents, "O valor não pode ser maior que o saldo disponível"),
+	});
 
 type KeyType = "cpf" | "email" | "random" | "phone";
 
@@ -48,6 +51,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 	const [keyType, setKeyType] = useState<KeyType>("cpf");
 	const [step, setStep] = useState<"form" | "success">("form");
 	const [displayAmount, setDisplayAmount] = useState(0);
+	const [error, setError] = useState<string | null>(null);
 
 	const isCpf = keyType === "cpf";
 
@@ -55,18 +59,29 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 		(parseFloat(balance.replace(",", ".")) || 0) * 100,
 	);
 
+	const validate = (cents: number) => {
+		const result = withdrawalSchema(balanceCents).safeParse({
+			amountCents: cents,
+		});
+		setError(result.success ? null : result.error.issues[0].message);
+	};
+
 	const handlePreset = (value: number) => {
-		const cents = Math.min(value * 100, balanceCents);
+		const cents = value * 100;
 		setSelectedPreset(value);
 		setAmountCents(cents);
+		validate(cents);
 	};
 
 	const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const digits = e.target.value.replace(/\D/g, "");
-		const cents = Math.min(parseInt(digits || "0", 10), balanceCents);
+		const cents = parseInt(digits || "0", 10);
 		setAmountCents(cents);
 		setSelectedPreset(null);
+		validate(cents);
 	};
+
+	const isBlocked = amountCents === 0 || !!error;
 
 	const handleClose = () => {
 		handleWBSOpen(false);
@@ -75,10 +90,16 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 			setSelectedPreset(null);
 			setStep("form");
 			setDisplayAmount(0);
+			setError(null);
 		}, 350);
 	};
 
 	const handleWithdraw = () => {
+		const result = withdrawalSchema(balanceCents).safeParse({ amountCents });
+		if (!result.success) {
+			setError(result.error.issues[0].message);
+			return;
+		}
 		makeWithdrawal(amountCents / 100);
 		setDisplayAmount(0);
 		setStep("success");
@@ -97,7 +118,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 			if (!startTime) startTime = timestamp;
 			const elapsed = timestamp - startTime;
 			const progress = Math.min(elapsed / duration, 1);
-			const eased = 1 - Math.pow(1 - progress, 3);
+			const eased = 1 - (1 - progress) ** 3;
 			setDisplayAmount(eased * end);
 			if (progress < 1) rafId = requestAnimationFrame(frame);
 		};
@@ -159,7 +180,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 										<div className="px-4 pt-4 pb-8">
 											<h2 className="text-xl font-bold text-white">Saque</h2>
 											<p className="text-sm text-white mb-4">
-												Saque mínimo R$30
+												Saque mínimo R$30,00
 											</p>
 
 											<label
@@ -181,8 +202,13 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 												value={formatCurrency(amountCents / 100)}
 												onChange={handleInput}
 												placeholder="Digite aqui..."
-												className="w-full bg-[#00151FA6] rounded-lg px-4 py-3 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#00e5b0] transition-colors mb-4"
+												className={`w-full bg-[#00151FA6] rounded-lg px-4 py-3 text-white placeholder-zinc-500 text-sm focus:outline-none transition-colors ${error ? "border border-red-500 mb-1" : "mb-4"}`}
 											/>
+											{error && (
+												<p className="text-xs text-red-400 mb-4 mt-1">
+													{error}
+												</p>
+											)}
 
 											<div className="flex gap-3 mb-4">
 												<div className="flex-1 flex flex-col">
@@ -280,7 +306,8 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 											<button
 												type="button"
 												onClick={handleWithdraw}
-												className="w-full bg-linear-to-r from-[#00FFAE]  to-[#06FFF7] text-black font-black py-4 rounded-xl text-xl hover:brightness-110 transition-all"
+												disabled={isBlocked}
+												className={`w-full bg-linear-to-r from-[#00FFAE] to-[#06FFF7] text-black font-black py-4 rounded-xl text-xl transition-all ${isBlocked ? "opacity-40 cursor-not-allowed" : "hover:brightness-110"}`}
 											>
 												Sacar agora
 											</button>
