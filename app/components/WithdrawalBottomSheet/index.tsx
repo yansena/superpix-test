@@ -41,6 +41,7 @@ interface WBSProps {
 
 export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 	const balance = useWithdrawal((state) => state.balance);
+	const makeWithdrawal = useWithdrawal((state) => state.makeWithdrawal);
 
 	const [amountCents, setAmountCents] = useState<number>(0);
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
@@ -78,6 +79,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 	};
 
 	const handleWithdraw = () => {
+		makeWithdrawal(amountCents / 100);
 		setDisplayAmount(0);
 		setStep("success");
 	};
@@ -108,7 +110,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 		<AnimatePresence>
 			{isOpen && (
 				<>
-					{/* Backdrop */}
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -118,7 +119,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 						className="fixed inset-0 bg-black/70 z-40"
 					/>
 
-					{/* Sheet */}
 					<motion.div
 						initial={{ y: "100%" }}
 						animate={{ y: 0 }}
@@ -136,7 +136,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 										exit={{ opacity: 0, x: -30 }}
 										transition={{ duration: 0.2 }}
 									>
-										{/* Banner */}
 										<div className="mt-2 flex flex-col items-center justify-center px-4">
 											<button
 												type="button"
@@ -185,7 +184,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 												className="w-full bg-[#00151FA6] rounded-lg px-4 py-3 text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-[#00e5b0] transition-colors mb-4"
 											/>
 
-											{/* PIX key row */}
 											<div className="flex gap-3 mb-4">
 												<div className="flex-1 flex flex-col">
 													<p className="text-xs text-white mb-1">
@@ -262,7 +260,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 												</div>
 											</div>
 
-											{/* Preset amounts */}
 											<div className="grid grid-cols-3 gap-2 mb-6">
 												{PRESET_AMOUNTS.map((v) => (
 													<button
@@ -346,7 +343,6 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 															<stop offset="100%" stopColor="#005A85" />
 														</linearGradient>
 													</defs>
-													{/* path do ícone Flame do Lucide */}
 													<path
 														d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
 														fill="url(#flameGradient)"
