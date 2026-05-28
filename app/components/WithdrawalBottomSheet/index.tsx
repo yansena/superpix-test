@@ -1,41 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown } from "lucide-react";
-import { z } from "zod";
-import { useWithdrawal } from "@/app/store/store";
-
-const withdrawalSchema = (balanceCents: number) =>
-	z.object({
-		amountCents: z
-			.number()
-			.min(3000, "O valor mínimo para saque é R$ 30,00")
-			.max(balanceCents, "O valor não pode ser maior que o saldo disponível"),
-	});
-
-type KeyType = "cpf" | "email" | "random" | "phone";
-
-const KEY_TYPE_OPTIONS: { value: KeyType; label: string }[] = [
-	{ value: "cpf", label: "CPF" },
-	{ value: "email", label: "Email" },
-	{ value: "random", label: "Chave aleatória" },
-	{ value: "phone", label: "Telefone" },
-];
-
-const ACCOUNT_PIX_KEYS: Record<KeyType, string> = {
-	cpf: "012.345.678-90",
-	email: "usuario@email.com",
-	random: "a1b2c3d4-e5f6-7890",
-	phone: "+55 11 99999-9999",
-};
-
-const PRESET_AMOUNTS = [20, 50, 100, 250, 500, 1000];
-
-function formatCurrency(value: number) {
-	return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import {
+	useWithdrawalForm,
+	formatCurrency,
+	KEY_TYPE_OPTIONS,
+	ACCOUNT_PIX_KEYS,
+	PRESET_AMOUNTS,
+} from "./useWithdrawalForm";
 
 interface WBSProps {
 	handleWBSOpen: (isOpen: boolean) => void;
@@ -43,89 +17,22 @@ interface WBSProps {
 }
 
 export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
-	const balance = useWithdrawal((state) => state.balance);
-	const makeWithdrawal = useWithdrawal((state) => state.makeWithdrawal);
-
-	const [amountCents, setAmountCents] = useState<number>(0);
-	const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
-	const [keyType, setKeyType] = useState<KeyType>("cpf");
-	const [step, setStep] = useState<"form" | "success">("form");
-	const [displayAmount, setDisplayAmount] = useState(0);
-	const [error, setError] = useState<string | null>(null);
-
-	const isCpf = keyType === "cpf";
-
-	const balanceCents = Math.floor(
-		(parseFloat(balance.replace(",", ".")) || 0) * 100,
-	);
-
-	const validate = (cents: number) => {
-		const result = withdrawalSchema(balanceCents).safeParse({
-			amountCents: cents,
-		});
-		setError(result.success ? null : result.error.issues[0].message);
-	};
-
-	const handlePreset = (value: number) => {
-		const cents = value * 100;
-		setSelectedPreset(value);
-		setAmountCents(cents);
-		validate(cents);
-	};
-
-	const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const digits = e.target.value.replace(/\D/g, "");
-		const cents = parseInt(digits || "0", 10);
-		setAmountCents(cents);
-		setSelectedPreset(null);
-		validate(cents);
-	};
-
-	const isBlocked = amountCents === 0 || !!error;
-
-	const handleClose = () => {
-		handleWBSOpen(false);
-		setTimeout(() => {
-			setAmountCents(0);
-			setSelectedPreset(null);
-			setStep("form");
-			setDisplayAmount(0);
-			setError(null);
-		}, 350);
-	};
-
-	const handleWithdraw = () => {
-		const result = withdrawalSchema(balanceCents).safeParse({ amountCents });
-		if (!result.success) {
-			setError(result.error.issues[0].message);
-			return;
-		}
-		makeWithdrawal(amountCents / 100);
-		setDisplayAmount(0);
-		setStep("success");
-	};
-
-	useEffect(() => {
-		if (step !== "success") return;
-
-		const end = amountCents / 100;
-
-		let startTime: number | null = null;
-		let rafId: number;
-		const duration = 1500;
-
-		const frame = (timestamp: number) => {
-			if (!startTime) startTime = timestamp;
-			const elapsed = timestamp - startTime;
-			const progress = Math.min(elapsed / duration, 1);
-			const eased = 1 - (1 - progress) ** 3;
-			setDisplayAmount(eased * end);
-			if (progress < 1) rafId = requestAnimationFrame(frame);
-		};
-
-		rafId = requestAnimationFrame(frame);
-		return () => cancelAnimationFrame(rafId);
-	}, [step, amountCents]);
+	const {
+		balance,
+		amountCents,
+		selectedPreset,
+		keyType,
+		setKeyType,
+		step,
+		displayAmount,
+		error,
+		isBlocked,
+		isCpf,
+		handlePreset,
+		handleInput,
+		handleClose,
+		handleWithdraw,
+	} = useWithdrawalForm(handleWBSOpen);
 
 	return (
 		<AnimatePresence>
@@ -205,21 +112,17 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 												className={`w-full bg-[#00151FA6] rounded-lg px-4 py-3 text-white placeholder-zinc-500 text-sm focus:outline-none transition-colors ${error ? "border border-red-500 mb-1" : "mb-4"}`}
 											/>
 											{error && (
-												<p className="text-xs text-red-400 mb-4 mt-1">
-													{error}
-												</p>
+												<p className="text-xs text-red-400 mb-4 mt-1">{error}</p>
 											)}
 
 											<div className="flex gap-3 mb-4">
 												<div className="flex-1 flex flex-col">
-													<p className="text-xs text-white mb-1">
-														Tipo de chave
-													</p>
+													<p className="text-xs text-white mb-1">Tipo de chave</p>
 													<div className="relative">
 														<select
 															value={keyType}
 															onChange={(e) =>
-																setKeyType(e.target.value as KeyType)
+																setKeyType(e.target.value as typeof keyType)
 															}
 															style={{ colorScheme: "dark" }}
 															className="w-full appearance-none bg-[#00151FA6] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#00e5b0] cursor-pointer"
@@ -334,23 +237,21 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 											<button
 												type="button"
 												onClick={handleClose}
-												className="absolute right-6 top-28 text-white"
+												className="absolute right-0 top-6 text-white"
 												aria-label="Fechar"
 											>
 												<X size={32} />
 											</button>
 										</div>
 
-										<div className="mb-6">
-											<span className="text-5xl font-black bg-linear-to-r from-[#00FFAE] to-[#06FFF7] bg-clip-text text-transparent">
-												Parabéns!
-											</span>
-											<p className="text-sm text-white">
-												Seu saque foi efetuado com sucesso
-											</p>
-										</div>
+										<span className="text-5xl font-black bg-linear-to-r from-[#00FFAE] to-[#06FFF7] bg-clip-text text-transparent mb-1">
+											Parabéns!
+										</span>
+										<p className="text-sm text-white mb-6">
+											Seu saque foi efetuado com sucesso
+										</p>
 
-										<div className="w-full  bg-linear-to-r from-[#00FFAE] from-10% to-[#06FFF7] to-90% rounded-t-4xl rounded-br-4xl px-6 py-5 flex flex-col items-center">
+										<div className="w-full bg-linear-to-r from-[#00FFAE] from-10% to-[#06FFF7] to-90% rounded-t-4xl rounded-br-4xl px-6 py-5 flex flex-col items-center mb-6">
 											<p className="text-sm text-[#00101D] font-medium mb-2 text-center flex items-center gap-1">
 												<svg
 													width="12"
@@ -390,7 +291,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 
 										<button
 											type="button"
-											className="w-full bg-linear-to-r from-[#00FFAE]  to-[#06FFF7] text-black font-bold text-2xl py-4 rounded-xl hover:brightness-110 transition-all mb-32 mt-9"
+											className="w-full bg-linear-to-r from-[#00FFAE] to-[#06FFF7] text-black font-bold text-2xl py-4 rounded-xl hover:brightness-110 transition-all mt-9"
 										>
 											Deposite agora
 										</button>
