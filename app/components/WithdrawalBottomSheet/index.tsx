@@ -334,21 +334,23 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 											<button
 												type="button"
 												onClick={handleClose}
-												className="absolute right-0 top-6 text-white"
+												className="absolute right-6 top-28 text-white"
 												aria-label="Fechar"
 											>
 												<X size={32} />
 											</button>
 										</div>
 
-										<span className="text-5xl font-black bg-linear-to-r from-[#00FFAE] to-[#06FFF7] bg-clip-text text-transparent font- mb-1">
-											Parabéns!
-										</span>
-										<p className="text-sm text-white mb-6">
-											Seu saque foi efetuado com sucesso
-										</p>
+										<div className="mb-6">
+											<span className="text-5xl font-black bg-linear-to-r from-[#00FFAE] to-[#06FFF7] bg-clip-text text-transparent">
+												Parabéns!
+											</span>
+											<p className="text-sm text-white">
+												Seu saque foi efetuado com sucesso
+											</p>
+										</div>
 
-										<div className="w-full  bg-linear-to-r from-[#00FFAE] from-10% to-[#06FFF7] to-90% rounded-t-4xl rounded-br-4xl px-6 py-5 flex flex-col items-center mb-6">
+										<div className="w-full  bg-linear-to-r from-[#00FFAE] from-10% to-[#06FFF7] to-90% rounded-t-4xl rounded-br-4xl px-6 py-5 flex flex-col items-center">
 											<p className="text-sm text-[#00101D] font-medium mb-2 text-center flex items-center gap-1">
 												<svg
 													width="12"
@@ -388,7 +390,7 @@ export function WithdrawalBottomSheet({ handleWBSOpen, isOpen }: WBSProps) {
 
 										<button
 											type="button"
-											className="w-full bg-linear-to-r from-[#00FFAE]  to-[#06FFF7] text-black font-bold text-2xl py-4 rounded-xl hover:brightness-110 transition-all "
+											className="w-full bg-linear-to-r from-[#00FFAE]  to-[#06FFF7] text-black font-bold text-2xl py-4 rounded-xl hover:brightness-110 transition-all mb-32 mt-9"
 										>
 											Deposite agora
 										</button>
